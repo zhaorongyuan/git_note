@@ -50,6 +50,7 @@ int main() {
 - `nullptr_t`：空指针类型`nullptr_t x = nullptr;`
 
 ## 派送数据类型
+
 ```c++
 - 数组：int arr[10];
 - 结构体：struct Person { int age; string name; };
