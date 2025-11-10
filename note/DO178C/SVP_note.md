@@ -40,19 +40,19 @@
 
 - **A-5-4: 源代码符合标准**  
   方法：静态分析（检查编码规则，如MISRA C）；代码审查。  
-  工具：simulink 模型顾问（检查模型规范）；Polyspace Bug Finder（MISRA编码规范检查）。  
+  工具：simulink 模型顾问（检查模型规范）；Polyspace Bug Finder（MISRA C编码规范检查）。  
 
 - **A-5-5: 源代码可追溯到低级需求**  
   方法：追溯分析（手动/自动化矩阵审查）。  
-  工具：Requirements Gateway（MathWorks工具，用于模型-需求-代码追溯）；Parasoft DTP（生成追溯矩阵）。  
+  工具：Requirements Gateway（MathWorks工具，用于模型-需求-代码追溯）  
 
 - **A-5-6: 源代码准确且一致**  
   方法：静态分析（检测不一致，如死代码）；单元/集成测试。  
   工具：VectorCAST（结构覆盖分析，确保一致执行）；Simulink Code Inspector（验证代码准确性）。  
 
 - **A-5-7: 软件集成过程的输出完整且正确**  
-  方法：硬件/软件集成测试（HIL测试）；覆盖分析（语句/分支/MC/DC覆盖）。  
-  工具：CANoe/VT System（模拟硬件集成）；VectorCAST（聚合覆盖报告）。  
+  方法：硬件/软件集成测试；覆盖分析（语句/分支/MC/DC覆盖）。  
+  工具：VectorCAST（聚合覆盖报告）。  
 
 - **A-5-8: 参数数据项文件正确且完整**  
   方法：静态分析（检查PDI值和结构）；集成测试（验证加载和执行）。  
@@ -60,5 +60,5 @@
 
 - **A-5-9: 参数数据项文件符合软件架构**  
   方法：审查（检查PDI与架构兼容性）；分析（数据流一致性）。  
-  工具：Simulink Code Inspector（模型-PDI-架构比较）；LDRA（PDI追溯和合规检查）。  
+  工具：Simulink Code Inspector（模型-PDI-架构比较）
 

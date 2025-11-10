@@ -62,7 +62,7 @@
 - 白盒：如果希望执行白盒转换，请勾选标有“白盒”的复选框。未勾选状态为默认值，除非已在工具=> 选项对话框的向导选项卡中勾选了“白盒”。  
 
         白盒使您能够测试测试单元中定义的静态函数和对象。对于C++，它还使您能够查看类中私有或受保护部分定义的成员函数和变量。
-
+    
         白盒对源文件进行以下更改：
         - 从测试单元中定义的子程序和全局对象中删除'static'限定符。
         - 将类定义中UUT(s)的'private'和'protected'关键字替换'public'关键字，以便这些区域中定义的函数和对象对测试框架可见。
@@ -75,3 +75,74 @@
 ![alt text](image-5.png)
 
 #### 步骤5：定位源文件
+
+![alt text](image-6.png)
+
+源目录：这些是VectorCAST在查找源文件、头文件和系统库时搜索的目录。
+
+    源目录可以是三种类型之一：
+        - 搜索目录——此类型目录中的单元可用作UUT。VectorCAST解析这些目录中的单元，使其可测试或可创建桩。
+        - 库包含目录——此类型目录中的单元通常是第三方库。VectorCAST不对数据类型进行测试、创建桩或解析单元。
+        - 类型处理目录–此类型目录中的单元会被解析为数据类型，但不会被设置为可测试或可桩化。
+
+#### 步骤6：选择UUTs&Stubs
+
+![alt text](image-7.png)
+
+测试单元类型：
+
+- **UUT (Unit Under Test，被测单元)**：这是**要测试的目标**。
+  - **定义**：在创建测试环境时指定的主要 `.c` 文件。
+  - **目的**：为这个文件中的函数**编写测试用例**，验证它们的逻辑是否正确，并检查它们的覆盖率。
+  - **在VectorCAST中**：在环境向导的“选择 UUT 和桩 (Choose UUTs & Stubs)”步骤中，会将 `.c` 文件（例如 `my_source_file.c`）**指定为 UUT**。VectorCAST 会解析这个文件，并为其准备一个可以为其内部函数（如 `function_A`、`function_B`）创建测试用例的框架。
+
+- **SBF (Stub-By-Function，按函数打桩)**：这是一种**测试技术**，用于隔离测试目标。
+  - **定义**：SBF 是一种高级的“打桩（Stubbing）”策略。“打桩”是指用一个假的、受控的“桩函数”来替换一个真实的函数。
+  - **目的**：SBF 的目的是**隔离 UUT**。当 UUT（`my_source_file.c`）调用了其他函数时（无论这些函数是在其他 `.c` 文件中，还是在 *UUT 文件内部*），可能不希望在测试中执行那些真实函数。SBF 允许**按单个函数**为基础来替换它们。
+  - **在VectorCAST中**：SBF **不是一个分配给整个文件的“类型”**。它是一种应用于**单个函数**的**功能**。
+
+##### 关键区别与联系
+
+SBF 这种技术**也可以应用于 UUT 文件内部的函数**。
+
+假设 `my_source_file.c` 被指定为 **UUT**，它内部有两个函数：
+
+```c
+// my_source_file.c
+
+// 这是一个你想测试的函数
+int function_to_test(int x) {
+    if (x > 10) {
+        return private_helper_function(x);
+    }
+    return 0;
+}
+
+// 这是一个辅助函数，你想在测试中“绕过”它
+static int private_helper_function(int val) {
+    // ... 可能包含复杂的逻辑或硬件访问 ...
+    return val * 2;
+}
+```
+
+在测试环境中：
+
+1. **UUT**：文件 `my_source_file.c` 被选为 UUT。
+2. **测试目标**：为 `function_to_test` 创建测试用例。
+3. **问题**：`function_to_test` 依赖于 `private_helper_function`。不想执行 `private_helper_function` 的真实逻辑，而是想在测试时强制它返回一个特定值（例如，返回 50）。
+4. **SBF 解决方案**：可以使用 **SBF** 功能来**仅针对 `private_helper_function` 进行打桩**。
+
+在这种情况下，`my_source_file.c` 仍然是 UUT，但它内部的 `private_helper_function` 函数被 SBF 处理了。在 VectorCAST 的参数树中，这个被打桩的函数会显示在 `<<SBF>>` 节点下，允许在测试用例中控制它的返回值。
+
+
+![alt text](image-8.png)
+
+#### 步骤7：用户代码（可选）
+
+![alt text](image-9.png)
+
+#### 构建环境
+
+在创建新环境向导中完成数据输入后，单击构建按钮。环境构建器确定UUT的源代码是否有任何编译错误，并确定依赖项。
+
+![alt text](image-10.png)
