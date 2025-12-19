@@ -113,18 +113,55 @@ HAL 层将 Drivers 层的功能组合成具体的板级功能对象 `hal_obj`。
 
 #### 系统状态机主函数-SysStateMachine()
 
-graph TD
-    Start((上电 Start)) --> Adjust[FSM_State_Adjust\n电流零偏校准]
-    Adjust -->|采样64次完成| Idle[FSM_State_Idle\n待机状态]
-    
-    Idle -->|Flag_EnableSys=1| Charge[FSM_State_Charge\n预充电]
-    Idle -->|无命令| Idle
-    
-    Charge -->|充电时间结束| Location[FSM_State_Location\n初始位置检测]
-    
-    Location -->|定位完成| Run[FSM_State_Run\n运行状态]
-    
-    Run -->|Flag_EnableSys=0| Idle
-    Run -->|发生故障| Fault[FSM_State_Fault\n故障停机]
-    
-    Fault -->|故障清除 & 复位| Idle
+* 根据 UserHdl.MotorCtrl.FSM 的状态调度不同的处理分支：
+  * FSM_State_Adjust: 校准（上电）阶段，采集电流零点
+  * FSM_State_Idle: 待机（默认）状态，响应 RunEnable 启动请求
+  * FSM_State_PhaseLoss: 缺相检测/PWM测试
+  * FSM_State_Check: 自检状态（自举电容充电后进入）
+  * FSM_State_Online: 运行状态，调用不同运行模式处理
+  * FSM_State_Offline: 关机处理，复位参数
+  * FSM_State_PrivateFOC: 私有 FOC 切换/锁桨等特殊流程
+
+```mermaid
+stateDiagram-v2
+    %% 状态定义
+    state "校准状态 (Adjust)" as Adjust
+    state "待机状态 (Idle)" as Idle
+    state "运行状态 (Online)" as Online
+    state "关机状态 (Offline)" as Offline
+    state "缺相检测 (PhaseLoss)" as PhaseLoss
+    state "自检状态 (Check)" as Check
+    state "私有FOC状态 (PrivateFOC)" as PrivateFOC
+
+    %% 初始状态
+    [*] --> Adjust : 上电
+
+    %% ================= 跳转逻辑 (带代码条件) =================
+
+    %% 1. From Adjust (校准)
+    Adjust --> Idle : IxAdjustCnt == 64<br />(电流零点采样完成)
+
+    %% 2. From Idle (待机)
+    Idle --> PhaseLoss : RunEnable == 1 &&<br />PWMTestEn == 1<br />(启动且需检测)
+    Idle --> Online : RunEnable == 1 &&<br />PWMTestEn != 1<br />(直接启动)
+
+    %% 3. From PhaseLoss (缺相检测)
+    PhaseLoss --> Online : State == 4 (检测完成)<br />OR<br />(State == 9 && FlyMode == 1)<br />(检测通过或强制飞行)
+
+    %% 4. From Check (自检)
+    Check --> Online : SpeedFbABS > 0<br />(检测到电机旋转)
+    Check --> Online : PhsChkFinsh == 1 &&<br />NoFault && CheckSlfCnt > 30<br />(自检通过且延时结束)
+
+    %% 5. From Online (运行)
+    Online --> PrivateFOC : RunMode == Slope_Ctrl &&<br />Step == ChgFreq<br />(驻坡模式变频)
+    Online --> Offline : RunEnable == 0<br />(停机指令)
+
+    %% 6. From Offline (关机)
+    Offline --> Online : RunEnable == 1 &&<br />Speed > IdleSpeed/2<br />(未停稳时快速重启)
+    Offline --> Idle : Speed <= IdleSpeed/2<br />OR TimeOut<br />(停机完成)
+
+    %% 7. From PrivateFOC (私有FOC)
+    PrivateFOC --> Idle : [Last=Idle] AlarmOver == 1<br />(报警音结束)
+    PrivateFOC --> Online : [Last=Online] RunEnable == 1 &&<br />RunMode != Slope<br />(退出驻坡模式)
+    PrivateFOC --> Offline : [Last=Online] RunEnable == 0<br />(强制停机)
+```
